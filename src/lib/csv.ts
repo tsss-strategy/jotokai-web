@@ -59,7 +59,11 @@ function formatTimeForCsv(startTime: string | null, endTime: string | null): str
  * カンマ・ダブルクォート・改行を含む場合はダブルクォートで囲む
  */
 function escapeCsvCell(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n") || value.includes("\r")) {
+  // CSV formula injection対策: =, +, -, @, \t, \r で始まるセルにプリフィックスを追加
+  if (/^[=+\-@\t\r]/.test(value)) {
+    value = "'" + value
+  }
+  if (value.includes(",") || value.includes('"') || value.includes("\n") || value.includes("\r") || value.includes("'")) {
     return `"${value.replace(/"/g, '""')}"`
   }
   return value

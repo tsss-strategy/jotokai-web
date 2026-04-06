@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatEventDate, formatTime } from "@/lib/format"
 import type { MergedEvent } from "@/types/event"
+import { isSafeUrl } from "@/lib/safe-url"
+import { sourceDisplayName } from "@/lib/source-names"
 
 export function EventCard({ event }: { event: MergedEvent }) {
   return (
@@ -43,9 +45,9 @@ export function EventCard({ event }: { event: MergedEvent }) {
             {formatTime(event.start_time)}
             {event.end_time ? ` ~ ${formatTime(event.end_time)}` : ""}
           </p>
-        ) : event.source_urls?.[0] ? (
+        ) : isSafeUrl(event.source_urls?.[0]) ? (
           <a
-            href={event.source_urls[0]}
+            href={event.source_urls![0]}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-blue-600 hover:underline"
@@ -57,11 +59,11 @@ export function EventCard({ event }: { event: MergedEvent }) {
         )}
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs text-muted-foreground">
-            情報元: {event.sources.join(", ")}
+            情報元: {event.sources.map(sourceDisplayName).join(", ")}
           </span>
-          {event.source_urls?.[0] && (
+          {isSafeUrl(event.source_urls?.[0]) && (
             <a
-              href={event.source_urls[0]}
+              href={event.source_urls![0]}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-blue-600 hover:underline"

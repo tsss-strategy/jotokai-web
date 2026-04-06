@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { formatTime } from "@/lib/format"
 import type { MergedEvent } from "@/types/event"
+import { isSafeUrl } from "@/lib/safe-url"
 
 const DAY_OF_WEEK_MAP: Record<string, string> = {
   Mon: "月", Tue: "火", Wed: "水", Thu: "木", Fri: "金", Sat: "土", Sun: "日",
@@ -87,10 +88,11 @@ export function EventTable({ events }: { events: MergedEvent[] }) {
                 : event.start_time
                 ? formatTime(event.start_time)
                 : null
-            const url =
+            const rawUrl =
               event.source_urls && event.source_urls.length > 0
                 ? event.source_urls[0]
                 : null
+            const url = isSafeUrl(rawUrl) ? rawUrl : null
 
             return (
               <tr

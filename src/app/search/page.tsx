@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { isSafeUrl } from "@/lib/safe-url"
 
 interface SearchEvent {
   eventDate: string
@@ -163,14 +164,18 @@ export default function SearchPage() {
                       </p>
                     )}
                     <div className="flex items-center justify-end pt-1">
-                      <a
-                        href={event.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline"
-                      >
-                        詳細を見る
-                      </a>
+                      {isSafeUrl(event.sourceUrl) ? (
+                        <a
+                          href={event.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          詳細を見る
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

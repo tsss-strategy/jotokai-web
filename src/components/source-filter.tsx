@@ -7,13 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-const SOURCE_NAMES: Record<string, string> = {
-  instagram: "Instagram",
-  twitter: "X (Twitter)",
-  "pet-home": "ペットのおうち",
-  nekojirushi: "ネコジルシ",
-}
+import { sourceDisplayName } from "@/lib/source-names"
 
 interface SourceFilterProps {
   value: string
@@ -31,7 +25,7 @@ export function SourceFilter({ value, onChange, sources }: SourceFilterProps) {
         <SelectItem value="all">すべての情報元</SelectItem>
         {sources.map((src) => (
           <SelectItem key={src} value={src}>
-            {SOURCE_NAMES[src] || src}
+            {sourceDisplayName(src)}
           </SelectItem>
         ))}
       </SelectContent>

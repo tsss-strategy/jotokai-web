@@ -52,6 +52,25 @@ function extractTextFromHtml(html: string): string {
   return text.slice(0, 10000)
 }
 
+// SSRF対策: 安全なURLのみfetchを許可
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false
+    const hostname = parsed.hostname.toLowerCase()
+    // プライベートIP・内部ホストをブロック
+    const blocked = [
+      "localhost", "127.0.0.1", "0.0.0.0", "::1",
+      "metadata.google.internal", "169.254.169.254",
+    ]
+    if (blocked.includes(hostname)) return false
+    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(hostname)) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 // AbortControllerでタイムアウト付きfetch
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<string> {
   const controller = new AbortController()
@@ -69,6 +88,23 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<string>
   }
 }
 
+// シンプルなインメモリレート制限（IP単位、1日50リクエスト）
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_MAX = 50
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false
+  entry.count++
+  return true
+}
+
 export async function POST(request: NextRequest) {
   // 環境変数チェック
   const googleApiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY
@@ -82,6 +118,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // レート制限チェック
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  if (!checkRateLimit(clientIp)) {
+    return NextResponse.json(
+      { success: false, error: "リクエスト回数の上限に達しました。明日再度お試しください。" },
+      { status: 429 }
+    )
+  }
+
   // リクエストボディからクエリを取得
   let query: string
   try {
@@ -90,6 +135,13 @@ export async function POST(request: NextRequest) {
     if (!query || typeof query !== "string") {
       return NextResponse.json(
         { success: false, error: "クエリが指定されていません" },
+        { status: 400 }
+      )
+    }
+    // クエリ長制限（DoS対策）
+    if (query.length > 200) {
+      return NextResponse.json(
+        { success: false, error: "クエリが長すぎます（200文字以内）" },
         { status: 400 }
       )
     }
@@ -123,16 +175,18 @@ export async function POST(request: NextRequest) {
     const searchRes = await fetch(searchUrl.toString(), { next: { revalidate: 0 } })
     if (!searchRes.ok) {
       const errText = await searchRes.text()
+      console.error("Google Search API error:", searchRes.status, errText)
       return NextResponse.json(
-        { success: false, error: `Google検索APIエラー: ${searchRes.status} ${errText}` },
+        { success: false, error: "検索サービスへの接続に問題が発生しました" },
         { status: 500 }
       )
     }
     const searchData = (await searchRes.json()) as GoogleSearchResponse
     searchItems = searchData.items ?? []
   } catch (err) {
+    console.error("Google Search API connection error:", err)
     return NextResponse.json(
-      { success: false, error: `Google検索APIへの接続エラー: ${String(err)}` },
+      { success: false, error: "検索サービスへの接続に問題が発生しました" },
       { status: 500 }
     )
   }
@@ -143,7 +197,7 @@ export async function POST(request: NextRequest) {
 
   for (const item of targetItems) {
     const url = item.link
-    if (!url) continue
+    if (!url || !isSafeUrl(url)) continue
     try {
       const html = await fetchWithTimeout(url, 5000)
       const text = extractTextFromHtml(html)
@@ -226,8 +280,9 @@ ${searchResultsText}
 
     if (!geminiRes.ok) {
       const errText = await geminiRes.text()
+      console.error("Gemini API error:", geminiRes.status, errText)
       return NextResponse.json(
-        { success: false, error: `Gemini APIエラー: ${geminiRes.status} ${errText}` },
+        { success: false, error: "AI解析サービスに問題が発生しました" },
         { status: 500 }
       )
     }
@@ -256,8 +311,9 @@ ${searchResultsText}
       searchQuery,
     })
   } catch (err) {
+    console.error("Gemini API connection error:", err)
     return NextResponse.json(
-      { success: false, error: `Gemini APIへの接続エラー: ${String(err)}` },
+      { success: false, error: "AI解析サービスへの接続に問題が発生しました" },
       { status: 500 }
     )
   }

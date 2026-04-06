@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css"
 import L from "leaflet"
 import type { MergedEvent } from "@/types/event"
 import { formatEventDate, formatTime } from "@/lib/format"
+import { isSafeUrl } from "@/lib/safe-url"
 
 // Fix default marker icon issue with webpack bundling
 const defaultIcon = L.icon({
@@ -64,9 +65,9 @@ export function EventMap({ events }: { events: MergedEvent[] }) {
               ) : (
                 <p className="text-gray-500">時間未定</p>
               )}
-              {event.source_urls?.[0] && (
+              {isSafeUrl(event.source_urls?.[0]) && (
                 <a
-                  href={event.source_urls[0]}
+                  href={event.source_urls![0]}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"
