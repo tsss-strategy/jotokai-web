@@ -265,7 +265,7 @@ ${searchResultsText}
 見つからない場合: { "found": false, "events": [] }`
 
   try {
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`
     const geminiRes = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
