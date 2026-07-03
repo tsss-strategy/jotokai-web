@@ -93,6 +93,9 @@ export function EventTable({ events }: { events: MergedEvent[] }) {
                 ? event.source_urls[0]
                 : null
             const url = isSafeUrl(rawUrl) ? rawUrl : null
+            // 回ごとのリンクが無いイベントは団体の代表リンクで代替
+            const fallbackUrl =
+              !url && isSafeUrl(event.org_fallback_url) ? event.org_fallback_url : null
 
             return (
               <tr
@@ -131,6 +134,15 @@ export function EventTable({ events }: { events: MergedEvent[] }) {
                       className="text-primary underline underline-offset-2 hover:opacity-80"
                     >
                       詳細↗
+                    </a>
+                  ) : fallbackUrl ? (
+                    <a
+                      href={fallbackUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-2 hover:opacity-80"
+                    >
+                      団体ページ↗
                     </a>
                   ) : (
                     "-"

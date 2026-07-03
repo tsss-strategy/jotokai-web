@@ -6,6 +6,10 @@ import { isSafeUrl } from "@/lib/safe-url"
 import { sourceDisplayName } from "@/lib/source-names"
 
 export function EventCard({ event }: { event: MergedEvent }) {
+  const detailUrl = isSafeUrl(event.source_urls?.[0]) ? event.source_urls![0] : null
+  // 回ごとのリンクが無いイベント（定期開催シート由来など）は団体の代表リンクで代替
+  const fallbackUrl =
+    !detailUrl && isSafeUrl(event.org_fallback_url) ? event.org_fallback_url : null
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
@@ -45,9 +49,9 @@ export function EventCard({ event }: { event: MergedEvent }) {
             {formatTime(event.start_time)}
             {event.end_time ? ` ~ ${formatTime(event.end_time)}` : ""}
           </p>
-        ) : isSafeUrl(event.source_urls?.[0]) ? (
+        ) : detailUrl ? (
           <a
-            href={event.source_urls![0]}
+            href={detailUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-blue-600 hover:underline"
@@ -61,16 +65,25 @@ export function EventCard({ event }: { event: MergedEvent }) {
           <span className="text-xs text-muted-foreground">
             情報元: {event.sources.map(sourceDisplayName).join(", ")}
           </span>
-          {isSafeUrl(event.source_urls?.[0]) && (
+          {detailUrl ? (
             <a
-              href={event.source_urls![0]}
+              href={detailUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-blue-600 hover:underline"
             >
               詳細を見る
             </a>
-          )}
+          ) : fallbackUrl ? (
+            <a
+              href={fallbackUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:underline"
+            >
+              団体ページを見る
+            </a>
+          ) : null}
         </div>
       </CardContent>
     </Card>

@@ -14,4 +14,5 @@ export interface MergedEvent {
   latitude: number | null
   longitude: number | null
   updated_at: string
+  org_fallback_url: string | null
 }
