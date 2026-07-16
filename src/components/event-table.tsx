@@ -99,7 +99,7 @@ export function EventTable({ events }: { events: MergedEvent[] }) {
 
             return (
               <tr
-                key={`${event.organization_id}-${event.event_date}-${event.prefecture}`}
+                key={`${event.organization_id}-${event.event_date}-${event.prefecture}-${event.venue_name ?? ""}`}
                 className="border-b hover:bg-muted/50 transition-colors"
               >
                 <td className="px-3 py-2 text-sm whitespace-nowrap">

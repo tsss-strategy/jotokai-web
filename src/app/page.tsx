@@ -1,24 +1,37 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { EventFilters } from "@/components/event-filters"
+import { fetchAllPages } from "@/lib/supabase/fetch-all"
+import { todayJst } from "@/lib/date"
 import type { MergedEvent } from "@/types/event"
 
 export const revalidate = 600
 
+export const metadata = {
+  alternates: {
+    canonical: "/",
+  },
+}
+
 async function getEvents(): Promise<MergedEvent[]> {
   const supabase = createServerSupabaseClient()
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayJst()
 
-  const { data, error } = await supabase
-    .from("v_events_merged")
-    .select("*")
-    .gte("event_date", today)
-    .order("event_date", { ascending: true })
+  const { data, error } = await fetchAllPages<MergedEvent>((from, to) =>
+    supabase
+      .from("v_events_merged")
+      .select("*")
+      .gte("event_date", today)
+      .order("event_date", { ascending: true })
+      .order("organization_id", { ascending: true })
+      .order("prefecture", { ascending: true })
+      .order("venue_name", { ascending: true })
+      .range(from, to)
+  )
 
   if (error) {
-    console.error("Failed to fetch events:", error)
-    return []
+    console.error("Failed to fetch events:", error.message)
   }
-  return data as MergedEvent[]
+  return data
 }
 
 export default async function HomePage() {

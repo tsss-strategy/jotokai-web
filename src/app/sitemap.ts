@@ -1,18 +1,27 @@
 import type { MetadataRoute } from "next"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { fetchAllPages } from "@/lib/supabase/fetch-all"
+import { todayJst } from "@/lib/date"
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://jotokai.vercel.app"
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://jotokai-web.vercel.app"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createServerSupabaseClient()
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayJst()
 
-  const { data } = await supabase
-    .from("v_events_merged")
-    .select("prefecture")
-    .gte("event_date", today)
+  const { data } = await fetchAllPages<{ prefecture: string }>((from, to) =>
+    supabase
+      .from("v_events_merged")
+      .select("prefecture")
+      .gte("event_date", today)
+      .order("prefecture", { ascending: true })
+      .order("event_date", { ascending: true })
+      .order("organization_id", { ascending: true })
+      .order("venue_name", { ascending: true })
+      .range(from, to)
+  )
 
-  const prefs = [...new Set(data?.map((d) => d.prefecture) ?? [])]
+  const prefs = [...new Set(data.map((d) => d.prefecture))]
 
   return [
     {

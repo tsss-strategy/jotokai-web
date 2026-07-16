@@ -11,6 +11,7 @@ import { ViewToggle } from "./view-toggle"
 import { DateFilter, type DateRange } from "./date-filter"
 import type { MergedEvent } from "@/types/event"
 import { exportToCsv } from "@/lib/csv"
+import { jstTodayAsUtcDate, utcDateToString } from "@/lib/date"
 import dynamic from "next/dynamic"
 
 const EventMap = dynamic(() => import("./event-map").then((m) => m.EventMap), {
@@ -30,33 +31,34 @@ export function EventFilters({ events }: { events: MergedEvent[] }) {
   const [customTo, setCustomTo] = useState("")
 
   const dateFilter = useMemo(() => {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const fmt = (d: Date) => d.toISOString().split("T")[0]
+    // JSTの今日を UTC 0時の Date として持ち、UTC系メソッドだけで演算する
+    // （ローカル0時の Date を toISOString すると1日前の日付になるため）
+    const today = jstTodayAsUtcDate()
+    const fmt = utcDateToString
 
     if (dateRange === "all") return { from: "", to: "" }
 
     if (dateRange === "custom") return { from: customFrom, to: customTo }
 
     if (dateRange === "this_week" || dateRange === "next_week") {
-      const day = today.getDay()
+      const day = today.getUTCDay()
       const diffToMonday = day === 0 ? 6 : day - 1
       const monday = new Date(today)
-      monday.setDate(today.getDate() - diffToMonday + (dateRange === "next_week" ? 7 : 0))
+      monday.setUTCDate(today.getUTCDate() - diffToMonday + (dateRange === "next_week" ? 7 : 0))
       const sunday = new Date(monday)
-      sunday.setDate(monday.getDate() + 6)
+      sunday.setUTCDate(monday.getUTCDate() + 6)
       return { from: fmt(monday), to: fmt(sunday) }
     }
 
     if (dateRange === "this_month") {
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      const firstDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1))
+      const lastDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0))
       return { from: fmt(firstDay), to: fmt(lastDay) }
     }
 
     // next_month
-    const firstDay = new Date(today.getFullYear(), today.getMonth() + 1, 1)
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 2, 0)
+    const firstDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1))
+    const lastDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 2, 0))
     return { from: fmt(firstDay), to: fmt(lastDay) }
   }, [dateRange, customFrom, customTo])
 

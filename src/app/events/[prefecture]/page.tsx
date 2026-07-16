@@ -1,6 +1,8 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { EventFilters } from "@/components/event-filters"
 import { PREFECTURES } from "@/lib/constants"
+import { fetchAllPages } from "@/lib/supabase/fetch-all"
+import { todayJst } from "@/lib/date"
 import type { MergedEvent } from "@/types/event"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -13,14 +15,21 @@ type Props = {
 
 export async function generateStaticParams() {
   const supabase = createServerSupabaseClient()
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayJst()
 
-  const { data } = await supabase
-    .from("v_events_merged")
-    .select("prefecture")
-    .gte("event_date", today)
+  const { data } = await fetchAllPages<{ prefecture: string }>((from, to) =>
+    supabase
+      .from("v_events_merged")
+      .select("prefecture")
+      .gte("event_date", today)
+      .order("prefecture", { ascending: true })
+      .order("event_date", { ascending: true })
+      .order("organization_id", { ascending: true })
+      .order("venue_name", { ascending: true })
+      .range(from, to)
+  )
 
-  const prefs = [...new Set(data?.map((d) => d.prefecture) ?? [])]
+  const prefs = [...new Set(data.map((d) => d.prefecture))]
   return prefs.map((p) => ({ prefecture: p }))
 }
 
@@ -30,6 +39,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${pref}の譲渡会イベント`,
     description: `${pref}で開催予定のペット（犬・猫）譲渡会イベント一覧。日程・会場・団体情報をまとめて確認できます。`,
+    alternates: {
+      canonical: `/events/${encodeURIComponent(pref)}`,
+    },
   }
 }
 
@@ -37,20 +49,24 @@ async function getEventsByPrefecture(
   prefecture: string
 ): Promise<MergedEvent[]> {
   const supabase = createServerSupabaseClient()
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayJst()
 
-  const { data, error } = await supabase
-    .from("v_events_merged")
-    .select("*")
-    .eq("prefecture", prefecture)
-    .gte("event_date", today)
-    .order("event_date", { ascending: true })
+  const { data, error } = await fetchAllPages<MergedEvent>((from, to) =>
+    supabase
+      .from("v_events_merged")
+      .select("*")
+      .eq("prefecture", prefecture)
+      .gte("event_date", today)
+      .order("event_date", { ascending: true })
+      .order("organization_id", { ascending: true })
+      .order("venue_name", { ascending: true })
+      .range(from, to)
+  )
 
   if (error) {
-    console.error("Failed to fetch events:", error)
-    return []
+    console.error("Failed to fetch events:", error.message)
   }
-  return data as MergedEvent[]
+  return data
 }
 
 export default async function PrefecturePage({ params }: Props) {

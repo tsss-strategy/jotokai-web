@@ -14,7 +14,7 @@ const notoSansJP = Noto_Sans_JP({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://jotokai.vercel.app"
+    process.env.NEXT_PUBLIC_SITE_URL || "https://jotokai-web.vercel.app"
   ),
   title: {
     default: SITE_NAME,
@@ -28,9 +28,7 @@ export const metadata: Metadata = {
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
   },
-  alternates: {
-    canonical: "/",
-  },
+  // canonical はここに書くと全ページに "/" が継承されてしまうため各ページで指定する
 }
 
 export default function RootLayout({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { jstTodayAsUtcDate } from "@/lib/date"
 
 // Gemini APIレスポンスの型定義
 interface GeminiResponse {
@@ -152,13 +153,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 当月・翌月を取得して検索クエリを構築
-  const now = new Date()
-  const thisYear = now.getFullYear()
-  const thisMonth = now.getMonth() + 1
-  const nextMonthDate = new Date(thisYear, now.getMonth() + 1, 1)
-  const nextYear = nextMonthDate.getFullYear()
-  const nextMonth = nextMonthDate.getMonth() + 1
+  // 当月・翌月を取得して検索クエリを構築（サーバーはUTCのためJST基準に変換）
+  const todayJstUtc = jstTodayAsUtcDate()
+  const thisYear = todayJstUtc.getUTCFullYear()
+  const thisMonth = todayJstUtc.getUTCMonth() + 1
+  const nextMonthDate = new Date(Date.UTC(thisYear, todayJstUtc.getUTCMonth() + 1, 1))
+  const nextYear = nextMonthDate.getUTCFullYear()
+  const nextMonth = nextMonthDate.getUTCMonth() + 1
 
   const searchQuery = `${query} 譲渡会 ${thisYear}年${thisMonth}月 OR ${nextYear}年${nextMonth}月`
 
@@ -216,8 +217,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 今日の日付
-  const todayStr = now.toLocaleDateString("ja-JP", {
+  // 今日の日付（JST基準）
+  const todayStr = new Date().toLocaleDateString("ja-JP", {
+    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "long",
     day: "numeric",

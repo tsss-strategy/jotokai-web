@@ -15,7 +15,7 @@ export function EventList({ events }: { events: MergedEvent[] }) {
     <div className="grid gap-4 sm:grid-cols-2">
       {events.map((event) => (
         <EventCard
-          key={`${event.organization_id}-${event.event_date}-${event.prefecture}`}
+          key={`${event.organization_id}-${event.event_date}-${event.prefecture}-${event.venue_name ?? ""}`}
           event={event}
         />
       ))}
