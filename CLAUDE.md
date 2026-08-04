@@ -17,7 +17,7 @@
 ## コマンド
 
 ```bash
-doppler run --config dev_personal -- npm run dev   # ローカル開発（Doppler 経由で env 注入）
+doppler run -- npm run dev                         # ローカル開発（Doppler統合プロジェクト jotokai/dev_web に setup 済み）
 npm install                                        # 依存追加時
 git push origin main                               # main push で Vercel が自動デプロイ
 npx vercel --prod                                  # 緊急時の手動デプロイ
@@ -44,7 +44,7 @@ src/
 
 ## 注意事項
 
-- main push で Vercel が自動デプロイ。手動デプロイは `npx vercel --prod`
+- Vercel プロジェクトは `tsss-strategy/jotokai-web`（GitHub連携）。main push で自動デプロイ。手動デプロイは `npx vercel --prod`（本番反映のため実行前に確認）
 - env は Vercel UI で直接編集しない（Doppler 側で編集し sync させる）
 - Preview/Development env は空運用（memory `feedback_vercel_env_rules.md` ルール3遵守）
 - CSV列: 開催日 / 都道府県 / 主催団体名 / 住所・会場 / 時間 / 情報を取得したURL
