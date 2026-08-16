@@ -10,7 +10,7 @@
 ## 機能
 
 - イベント一覧（カード / テーブル / 地図ビュー）
-- Web検索（Google Custom Search + Gemini）: `/search`
+- Web検索（Google Custom Search + GPT-5.6 Luna）: `/search`
 - マニュアル: `/help`
 - CSVダウンロード（UTF-8-sig）
 
@@ -40,7 +40,7 @@ src/
 - 環境変数は Doppler `jotokai-web/prd` で管理。主要キー:
   - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY` (旧JWT形式、四半期ローテ対象 → `project_jotokai_web_service_role_rotation_pending.md`)
-  - `GEMINI_API_KEY` / `GOOGLE_CUSTOM_SEARCH_API_KEY` / `GOOGLE_CUSTOM_SEARCH_ENGINE_ID`
+  - `OPENAI_API_KEY`（要登録・GPT-5.6 Luna用） / `GOOGLE_CUSTOM_SEARCH_API_KEY` / `GOOGLE_CUSTOM_SEARCH_ENGINE_ID`（`GEMINI_API_KEY` はコード撤去済み・キー削除は承認待ち）
 
 ## 注意事項
 

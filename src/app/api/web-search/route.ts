@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { jstTodayAsUtcDate } from "@/lib/date"
 
-// Gemini APIレスポンスの型定義
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{ text?: string }>
-    }
+// OpenAI Responses APIレスポンスの型定義
+interface OpenAIResponse {
+  output?: Array<{
+    type?: string
+    content?: Array<{ type?: string; text?: string }>
   }>
 }
 
@@ -34,7 +33,7 @@ interface SearchEvent {
   sourceUrl: string
 }
 
-interface GeminiExtractResult {
+interface ExtractResult {
   found: boolean
   events: SearchEvent[]
 }
@@ -110,9 +109,9 @@ export async function POST(request: NextRequest) {
   // 環境変数チェック
   const googleApiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY
   const googleCx = process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID
-  const geminiApiKey = process.env.GEMINI_API_KEY
+  const openaiApiKey = process.env.OPENAI_API_KEY
 
-  if (!googleApiKey || !googleCx || !geminiApiKey) {
+  if (!googleApiKey || !googleCx || !openaiApiKey) {
     return NextResponse.json(
       { success: false, error: "API keys not configured" },
       { status: 500 }
@@ -225,7 +224,7 @@ export async function POST(request: NextRequest) {
     day: "numeric",
   })
 
-  // Geminiに渡す検索結果テキストを構築
+  // LLMに渡す検索結果テキストを構築
   const searchResultsText = pageContents
     .map(
       (p, i) =>
@@ -233,7 +232,7 @@ export async function POST(request: NextRequest) {
     )
     .join("\n\n")
 
-  // Gemini Flash でJSON抽出
+  // GPT-5.6 Luna でJSON抽出
   const prompt = `以下の検索結果から、今後の犬猫譲渡会情報を抽出してください。
 
 【検索キーワード】: ${query}
@@ -267,30 +266,39 @@ ${searchResultsText}
 見つからない場合: { "found": false, "events": [] }`
 
   try {
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`
-    const geminiRes = await fetch(geminiUrl, {
+    const openaiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openaiApiKey}`,
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          response_mime_type: "application/json",
-        },
+        model: "gpt-5.6-luna",
+        reasoning: { effort: "none" },
+        instructions:
+          "保護犬・保護猫の譲渡会情報をWeb検索結果から抽出するアシスタントです。必ずJSONのみで回答します。",
+        input: prompt,
+        max_output_tokens: 2048,
+        store: false,
+        text: { format: { type: "json_object" } },
       }),
       next: { revalidate: 0 },
     })
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text()
-      console.error("Gemini API error:", geminiRes.status, errText)
+    if (!openaiRes.ok) {
+      const errText = await openaiRes.text()
+      console.error("OpenAI API error:", openaiRes.status, errText)
       return NextResponse.json(
         { success: false, error: "AI解析サービスに問題が発生しました" },
         { status: 500 }
       )
     }
 
-    const geminiData = (await geminiRes.json()) as GeminiResponse
-    const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
+    const openaiData = (await openaiRes.json()) as OpenAIResponse
+    const rawText =
+      openaiData.output
+        ?.flatMap((item) => item.content ?? [])
+        .find((part) => part.type === "output_text")?.text ?? ""
 
     // ```json ... ``` のコードブロックを除去してJSONパース
     const jsonText = rawText
@@ -299,9 +307,9 @@ ${searchResultsText}
       .replace(/\s*```$/i, "")
       .trim()
 
-    let result: GeminiExtractResult
+    let result: ExtractResult
     try {
-      result = JSON.parse(jsonText) as GeminiExtractResult
+      result = JSON.parse(jsonText) as ExtractResult
     } catch {
       // パースエラーは空配列で返す
       result = { found: false, events: [] }
@@ -313,7 +321,7 @@ ${searchResultsText}
       searchQuery,
     })
   } catch (err) {
-    console.error("Gemini API connection error:", err)
+    console.error("OpenAI API connection error:", err)
     return NextResponse.json(
       { success: false, error: "AI解析サービスへの接続に問題が発生しました" },
       { status: 500 }
