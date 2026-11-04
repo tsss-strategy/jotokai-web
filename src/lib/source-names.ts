@@ -4,7 +4,7 @@ export const SOURCE_NAMES: Record<string, string> = {
   nekojirushi: "ネコジルシ",
   pethome: "ペットのおうち",
   instagram: "Instagram",
-  twitter: "X (Twitter)",
+  x: "X",
   rss: "公式サイト・ブログ",
 }
 
